@@ -1,0 +1,114 @@
+<html>
+    <body>
+        <table>
+            <tr>
+                <td style="padding-right: 100px; vertical-align: top">
+                    Tweet ids list:<br>
+                    <textarea rows="20" cols="30" id="tweetids"></textarea><br>
+                    Number of tweets:
+                    <label id="total"></label><br>
+                    Number of relevant tweets:
+                    <label id="relevant"></label><br>
+                    Number of hightly relevant tweets:
+                    <label id="highly-relevant"></label><br>
+                    Number of non-relevant tweets:
+                    <label id="non-relevant"></label><br>
+                </td>
+                <td style="vertical-align: top">
+                    <div id="result"></div>
+                </td>
+            </tr>
+        </table>
+        <script type = "text/javascript" src = "http://code.jquery.com/jquery-1.6.4.min.js"></script>
+        <script>
+            var ids = new Array();
+            $.ajax({
+                url: "json/tweetIds.json",
+                dataType: "text",
+                async: false,
+                success: function(data) {
+                    var json = $.parseJSON(data);
+                    $.each(json.ids, function(index, value) {
+                        ids[index] = value.id;
+                    })
+                }
+            });
+            $("#tweetids").text(ids.join("\n"));
+            $("#total").text(ids.length);
+            
+            var qrels = {};
+            $.ajax({
+                url: "json/qrels.json",
+                dataType: "text",
+                async: false,
+                success: function(data) {
+                    var json = $.parseJSON(data);
+                    $.each(json.qrels, function(index, value) {
+                        qrels[value.id] = value.rel;
+                    })
+                }
+            });
+            
+            var htmls = {};
+            var failNum = 0;
+            var relColor = "#CCFFE5";
+            var highrelColor = "#00CC66";
+            var nonrelColor = "#FF6666";
+            
+            function display() {
+                if (Object.keys(htmls).length == ids.length - failNum) {
+                    !function(d,s,id){var js,fjs=d.getElementsByTagName(s)[0],p=/^http:/.test(d.location)?'http':'https';if(!d.getElementById(id)){js=d.createElement(s);js.id=id;js.src=p+"://platform.twitter.com/widgets.js";fjs.parentNode.insertBefore(js,fjs);}}(document,"script","twitter-wjs");
+                    var relNum = 0;
+                    var highrelNum = 0;
+                    var nonrelNum = 0;
+                    for (var i = 0; i < ids.length; i ++) {
+                        var rel = 0;
+                        var color;
+                        if (qrels[ids[i]] != null) {
+                            if (qrels[ids[i]] == 0) {
+                                nonrelNum += 1;
+                                color = nonrelColor;
+                            } else if (qrels[ids[i]] == 1) {
+                                relNum += 1;
+                                color = relColor;
+                            } else if (qrels[ids[i]] == 2) {
+                                relNum += 1;
+                                highrelNum += 1;
+                                color = highrelColor;
+                            }
+                        } else {
+                            nonrelNum += 1;
+                            color = nonrelColor;
+                        }
+                        $("#relevant").text(relNum);
+                        $("#highly-relevant").text(highrelNum);
+                        $("#non-relevant").text(nonrelNum);
+                        if (htmls[ids[i]] != null) {
+                            $("#result").html($("#result").html() + "<div style='background-color: " + color + "'>" + htmls[ids[i]] + "</div>");
+                        } else {
+                            $("#result").html($("#result").html() + "<div style='background-color: " + nonrelColor + "'>Id: " + ids[i] + "</div><br>");
+                        }
+                    }
+                }
+            }
+            
+            for (var i = 0; i < ids.length; i ++) {
+                var url = "https://api.twitter.com/1/statuses/oembed.json?id=" + ids[i] + "&omit_script=true";
+                $.ajax({
+                    url: url,
+                    dataType: "jsonp",
+                    timeout: 1500,
+                    success: function(data) {
+                        urlsplit = data.url.split("/");
+                        htmls[urlsplit[urlsplit.length - 1]] = "Id: " + urlsplit[urlsplit.length - 1] + "<br>" + data.html;
+                        display();
+                    },
+                    error: function() {
+                        failNum ++;
+                        display();
+                    }
+                });
+            }
+        </script>
+    </body>
+</html>

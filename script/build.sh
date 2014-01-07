@@ -1,0 +1,2 @@
+python generateIdsJson.py
+python generateQrelsJson.py
