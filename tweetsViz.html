@@ -97,7 +97,7 @@
                 $.ajax({
                     url: url,
                     dataType: "jsonp",
-                    timeout: 1500,
+                    timeout: 3000,
                     success: function(data) {
                         urlsplit = data.url.split("/");
                         htmls[urlsplit[urlsplit.length - 1]] = "Id: " + urlsplit[urlsplit.length - 1] + "<br>" + data.html;
